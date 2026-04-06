@@ -29,169 +29,298 @@
 
 ---
 
-## MISSION BRIEF
+## Mission Brief
 
-The modern attack surface is expanding faster than security budgets can keep up. Faced with fragmented tools, expensive proprietary scanners, and a relentless volume of false positives, security teams are often forced into reactive postures. LinkLoad was engineered to disrupt this cycle.
+Security teams rarely lose because they lack tools.
+They lose because noise arrives faster than signal.
 
-LinkLoad is an advanced, AI-orchestrated reconnaissance platform designed to give security operations a decisive tactical advantage. By unifying elite open-source scanning units (OWASP ZAP, Nuclei, Wapiti, Nikto) into a high-speed, parallelized execution engine, the platform identifies vulnerabilities and immediately correlates them with the **MITRE ATT&CK framework**. This isn't just a list of broken links—it's actionable intelligence that maps findings directly to attacker tactics and techniques.
+LinkLoad is built as a tactical command platform for web reconnaissance. It coordinates scanner units, fuses findings with intelligence, maps risk to MITRE ATT&CK, and delivers one operational picture through a single gateway.
 
-Built on a resilient, async microservices architecture, LinkLoad provides the technical depth of an enterprise penetration testing suite with the speed and flexibility of modern DevOps tools.
-
-### The Strategic Value Proposition
-
-1.  **Orchestrated Parallel Execution**: While traditional tools run sequentially, LinkLoad fans out multiple specialized scanners in parallel, reducing typical mission time by over 60%.
-2.  **Multi-Provider AI Fallback**: We utilize an intelligent AI layer (integrating Groq, OpenAI, and Claude) to deduplicate results, recalibrate severities based on context, and generate executive summaries. Our fallback protocol ensures high-fidelity analysis even if an individual provider is unavailable.
-3.  **MITRE ATT&CK Mapping & Risk Indexing**: Every finding is indexed against the MITRE ATT&CK kill chain, providing operators with a precise understanding of the attacker's trajectory (e.g., T1190: Exploit Public-Facing Application) and the associated business risk.
-4.  **Resilient Architecture & Data Integrity**: Our "Single-Writer Core" and "Shared Database Pattern with RLS" ensure that your reconnaissance data remains consistent, traceable, and isolated by organization.
-5.  **Zero Vendor Lock-In**: By leveraging the power of mature open-source weaponry and augmenting it with AI, we provide an enterprise-grade solution that eliminates proprietary licensing taxes and respects operational autonomy.
+If your team needs fast detection and clear prioritization under pressure, this stack is designed for that exact battlefield.
 
 ---
 
-## MISSION STATUS & ROADMAP
+## Theater Status 
 
-### [OPERATIONAL] Phase 1: Web Application Reconnaissance
-The core offensive security platform is currently deployed and battle-tested in production. It features full scanner orchestration, the complete AI analysis pipeline, and real-time WebSocket intelligence telemetry.
-
-### [IN TACTICAL PLANNING] Future Operations
-Our roadmap outlines a phased expansion to cover the entire organizational attack surface:
-
-- [DEPLOYED] **Web Applications** (Phase 1)
-- [PLANNED] **API Security warfare** (Q1 2026 - Phase 2)
-- [PLANNED] **Source Code Security (SAST/DAST)** (Q2 2026 - Phase 3)
-- [PLANNED] **Cloud Security Posture (CSPM)** (Q2-Q3 2026 - Phase 4)
-- [PLANNED] **Container & K8s Security** (Q3 2026 - Phase 5)
-- [PLANNED] **Continuous 24/7 Monitoring** (Q4 2026 - Phase 7)
-- [PLANNED] **Mobile Application Security** (2027 - Phase 9)
-- [PLANNED] **Network Perimeter Defense** (2027-2028 - Phase 10)
+- [ACTIVE] Web reconnaissance operations in production workflows.
+- [ACTIVE] Identity service split out and routed through BFF.
+- [ACTIVE] Scanner orchestrator + sidecar scanner fleet.
+- [ACTIVE] Async enrichment and intelligence processing via Redis.
+- [ACTIVE/OPTIONAL] Full observability stack with Prometheus, Loki, and Grafana.
+- [IN PROGRESS] ML lane is deployed and evolving as models mature.
 
 ---
 
-## TABLE OF CONTENTS
+## Operational Objectives
 
-- [Operational Capabilities](#operational-capabilities)
-- [System Architecture](#system-architecture)
-- [Deployment Protocol](#deployment-protocol)
-- [Mission Control Interface](#mission-control-interface)
-- [API Command Structure](#api-command-structure)
-- [Scanner Arsenal](#scanner-arsenal)
-- [Intelligence Analysis Engine](#intelligence-analysis-engine)
-- [Security Protocols](#security-protocols)
-- [Domain Authorization Protocol](#domain-authorization-protocol)
-- [Configuration Matrix](#configuration-matrix)
-- [Verification Procedures](#verification-procedures)
-- [Tactical Roadmap](#tactical-roadmap)
-- [Field Support](#field-support)
+1. Launch scanners in parallel and reduce mission time.
+2. Keep frontend simple: one gateway, one contract.
+3. Preserve data integrity with a single-writer Core model.
+4. Provide live mission feedback with WebSocket notifications and polling fallback.
+5. Keep deployment repeatable with Docker Compose and service isolation.
 
 ---
 
-## OPERATIONAL CAPABILITIES
-
-### Current Combat Readiness - Phase 1: Web Reconnaisance
-
-| Unit | Classification | Tactical Role |
-|---------|---------------|------------------|
-| **OWASP ZAP** | Heavy Active Recon | Authenticated penetration testing and complex session fuzzing |
-| **Nuclei** | Rapid Response | Lightning-fast CVE identification via 8000+ templates |
-| **Wapiti** | Black-Box Fuzzer | Relentless unauthenticated perimeter vulnerability assessment |
-| **Nikto** | Infra Analyst | Identification of dangerous web server misconfigurations/defaults |
-
-### Intelligence Fusion Highlights
-
-- **Parallel Orchestration**: Reduces the 6-hour sequential scan burden to a 45-minute tactical mission.
-- **AI-Driven Refinement**: Machine learning pipelines reduce noise and false positives by up to 40%.
-- **Live Intelligence Feed**: WebSockets deliver mission progress and critical discoveries to the dashboard in real-time.
-- **Normalized Risk Scoring**: We calculate a 0-10 index factoring in CVSS, exploitability, and business asset criticality.
-
----
-
-## SYSTEM ARCHITECTURE
+## Command Topology
 
 ```
-                              ┌─────────────────────────────┐
-                              │       CLIENT LAYER          │
-                              │    Frontend (React 18)      │
-                              └─────────────┬───────────────┘
-                                            │
-                                   REST API / WebSocket
-                                            │
-                              ┌─────────────▼───────────────┐
-                              │      GATEWAY LAYER          │
-                              │   LinkLoad-BFF (Gateway)    │
-                              └─────────────┬───────────────┘
-                                            │
-              ┌─────────────────────────────┼─────────────────────────────┐
-              │                             │                             │
-    ┌─────────▼─────────┐        ┌──────────▼──────────┐       ┌──────────▼─────────┐
-    │  SYNCHRONOUS OPS  │        │   SCANNER ARSENAL   │       │   DATA & INFRA     │
-    │   Identity Svc    │        │  (Sidecar Units)    │       │   Redis Bus        │
-    │   Scanner Orch    │ <────> │  ZAP   -  Nuclei    │ <───> │   Supabase DB      │
-    │   Core (Writer)   │        │  Wapiti - Nikto     │       │   (Single Writer)  │
-    └─────────┬─────────┘        └─────────────────────┘       └──────────┬─────────┘
-              │                                                           │
-              └─────────────────────────────┬─────────────────────────────┘
-                                            │
-                              ┌─────────────▼───────────────┐
-                              │    ASYNCHRONOUS PIPELINE    │
-                              │   Enrichment | Intelligence │
-                              │   Machine Learning (ML)     │
-                              └─────────────────────────────┘
+                    ┌──────────────────────────┐
+                    │        Frontend          │
+                    │   React Dashboard:3000   │
+                    └─────────────┬────────────┘
+                            │ REST + WS
+                    ┌─────────────▼────────────┐
+                    │      LinkLoad-BFF        │
+                    │       Gateway:5000       │
+                    └──────┬─────────┬─────────┘
+                        │         │
+           ┌─────────────────────▼───┐ ┌───▼────────────────────┐
+           │   Sync Service Plane    │ │   Scanner Sidecars      │
+           │ Identity | Scanner |    │ │ ZAP | Nuclei | Wapiti  │
+           │ Core (Single Writer)    │ │ | Nikto                 │
+           └───────────────┬─────────┘ └───────────┬────────────┘
+                     │                       │
+                     └──────────┬────────────┘
+                          │
+                     ┌───────▼────────┐
+                     │  Redis Events  │
+                     └───┬─────────┬──┘
+                         │         │
+                ┌──────────────▼───┐ ┌──▼───────────────┐
+                │   Enrichment      │ │ Intelligence      │
+                │ (Threat Context)  │ │ (Risk + MITRE +   │
+                │                   │ │ Cost-Benefit)     │
+                └──────────────┬────┘ └──────┬───────────┘
+                         │             │
+                         └──────┬──────┘
+                             │
+                         ┌──────▼───────┐
+                         │      ML      │
+                         └──────┬───────┘
+                             │
+                         ┌──────▼───────┐
+                         │ PostgreSQL / │
+                         │ Supabase DB  │
+                         └──────────────┘
 ```
+
+### Rules of the Battlespace
+
+- Frontend talks only to BFF at http://localhost:5000.
+- BFF routes auth to Identity and scan write/read paths to Scanner/Core.
+- Redis carries cross-service event traffic.
+- Core remains the authoritative persistence coordinator.
 
 ---
 
-## DEPLOYMENT PROTOCOL
+## Unit Roster
 
-LinkLoad is designed for high availability and rapid installation through standard container orchestration.
+| Unit | Location | Tactical Role | Host Port |
+|------|----------|---------------|-----------|
+| Frontend | linkload-frontend | Mission dashboard | 3000 |
+| BFF | linkload-bff | API gateway, policy, WS notifications | 5000 |
+| Identity | linkload-identity | Authentication and account controls | Internal |
+| Scanner Orchestrator | linkload-scanner/orchestrator | Fan-out scan command | Internal |
+| ZAP | compose image | Active web app scanner | 8080 |
+| Nuclei/Wapiti/Nikto | linkload-scanner/*-svc | Scanner sidecar APIs | Internal |
+| Core | linkload-core | Result assembly and data write path | Internal |
+| Enrichment | linkload-enrichment | Threat context augmentation | Internal |
+| Intelligence | linkload-intelligence | Risk and MITRE analysis | Internal |
+| ML | linkload-ml | ML post-processing lane | Internal |
+| Redis | compose-managed | Event bus and cache | Internal |
+
+---
+
+## Mission Flow
+
+1. Operator starts a scan from the frontend.
+2. BFF forwards command traffic to the Scanner orchestrator.
+3. Scanner fan-outs to ZAP, Nuclei, Wapiti, and Nikto.
+4. Progress and completion events are published to Redis.
+5. Enrichment and Intelligence consume events and add context.
+6. ML lane can consume downstream events for advanced inference.
+7. Core assembles normalized results and persists records.
+8. Frontend receives updates through polling and optional WS notifications.
+
+---
+
+## Deployment Playbook
 
 ### Prerequisites
-- Docker Engine 20.10+ & Docker Compose 2.0+
-- 16GB RAM recommended for deep scanner execution.
 
-### Rapid Deployment Sequence
+- Docker Engine 20.10+
+- Docker Compose v2+
+- Supabase project and credentials
+- Optional AI provider keys for enrichment/intelligence
+
+### Step 1: Clone
+
 ```bash
-# 1. Clone & Access
-git clone https://github.com/pratiyk/Link-Load.git && cd Link-Load
+git clone https://github.com/pratiyk/Link-Load.git
+cd Link-Load
+```
 
-# 2. Strategic Configuration
-# Edit environment variables in linkload-core/backend/.env and linkload-frontend/frontend/.env
+### Step 2: Stage Environment Files
 
-# 3. Deploy
-cd linkload-devops && docker-compose up -d
+Minimum files:
+
+- linkload-devops/.env
+- linkload-core/.env
+
+Reference templates:
+
+- linkload-core/.env.example
+- linkload-bff/.env.example
+- linkload-frontend/.env.example
+- linkload-identity/.env.example
+
+Critical values:
+
+- DATABASE_URL
+- SUPABASE_URL
+- SUPABASE_KEY
+- SUPABASE_SERVICE_KEY
+- SUPABASE_JWT_SECRET
+- SECRET_KEY
+- REACT_APP_SUPABASE_URL
+- REACT_APP_SUPABASE_ANON_KEY
+
+### Step 3: Launch Stack
+
+```bash
+cd linkload-devops
+docker compose up -d --build
+```
+
+### Step 4: Confirm Service Readiness
+
+- Frontend: http://localhost:3000
+- BFF root: http://localhost:5000/
+- BFF liveness: http://localhost:5000/health/live
+
+```bash
+cd linkload-devops
+docker compose ps
 ```
 
 ---
 
-## SCANNER ARSENAL & INTELLIGENCE ENGINE
+## Live Telemetry Stack (Optional)
 
-### Offensive Weapons
-- **OWASP ZAP**: Our "Deep Penetration Specialist" targets authenticated applications, handling complex session tokens and multi-step attack chains.
-- **Nuclei**: Our "Speed Demon" uses community-maintained templates to identify newly disclosed CVEs within hours of release.
-- **Wapiti**: Our "Injection Hunter" relentlessly fuzzes unauthenticated parameters to find SSRF, XXE, and blind SQL injection.
-- **Nikto**: Our "Infrastructure Analyst" fingerprints servers to find exposed admin interfaces and dangerous default files.
+Run the observability package independently:
 
-### AI Intelligence Protocol
-We don't just "bolter on" AI. Our engine performs deep **Vulnerability Assessment** and **Executive Summary Generation**. If a provider like OpenAI hits a rate limit, the system automatically falls back to Groq or Claude to ensure your intelligence pipeline never stalls.
+```bash
+cd monitoring-service
+docker compose up -d
+```
 
-Every mission result is enriched with **MITRE ATT&CK mapping**, allowing you to see how a technical flaw in a login form fits into the broader context of an attacker's Initial Access strategy.
+Operational endpoints:
 
----
+- Grafana: http://localhost:3030
+- Prometheus: http://localhost:9090
+- Loki: http://localhost:3100
+- cAdvisor: http://localhost:8081
 
-## SECURITY & COMPLIANCE
-
-- **Row-Level Security (RLS)**: Enforced at the database layer to ensure strict isolation of organizational data.
-- **Domain Authorization**: We verify ownership via DNS TXT records before allowing authorized reconnaissance missions.
-- **Secure Authentication**: JWT-based token architecture with role-based access control (RBAC).
-- **Compliance Mapping**: All findings are mapped to **PCI-DSS, HIPAA, and SOC 2** requirements to streamline auditing.
+Note: monitoring-service expects the external network linkload_linkload-network created by the main stack.
 
 ---
 
-## SUPPORT & LEGAL
+## Frontend Runtime Injection
 
-### Responsible Use
-LinkLoad is intended for authorized, ethical security reconnaissance only. Ensure you have documented permission from target owners before initiating any mission.
+Frontend Supabase public settings are injected at container startup.
 
-### License
-Released under the **MIT License**. We believe in the power of open-source security tools.
+- linkload-frontend/docker-entrypoint.sh generates runtime-config.js.
+- Browser reads window.__RUNTIME_CONFIG__ via src/config/runtimeConfig.js.
+- Entry script blocks accidental service-role key exposure in frontend env.
 
-### Credits
+This keeps public config flexible without rebuilding images for every env change.
+
+---
+
+## Real-Time Command Channel
+
+BFF exposes notification WebSocket routes:
+
+- /ws/scans/{scan_id}
+- /ws/scans/{scan_id}/progress
+- /ws/scans/{scan_id}/events
+
+Progress and results are always available through polling-safe endpoints:
+
+- /api/v1/scans/comprehensive/{scan_id}/status
+- /api/v1/scans/comprehensive/{scan_id}/result
+
+---
+
+## Shared Signal Protocol
+
+shared_events defines cross-service event contracts.
+
+- Docker services mount it read-only and use PYTHONPATH=/workspace:/app.
+- Local dev mode:
+
+```bash
+pip install -e ../shared_events
+```
+
+---
+
+## Repository Battalions
+
+- linkload-bff: gateway and API policy layer
+- linkload-core: persistence and aggregation command center
+- linkload-identity: identity and access control service
+- linkload-scanner: orchestrator and scanner sidecars
+- linkload-enrichment: async intelligence enrichment
+- linkload-intelligence: risk and MITRE analysis
+- linkload-ml: machine learning service lane
+- linkload-frontend: operator dashboard
+- linkload-devops: primary compose and runtime wiring
+- monitoring-service: metrics, logs, dashboards
+- shared_events: event models and bus utilities
+- linkload-docs: architecture and implementation guides
+
+---
+
+## Training Drills
+
+```bash
+# Core tests
+cd linkload-core
+pytest
+
+# Frontend tests
+cd ../linkload-frontend
+npm test -- --watchAll=false
+
+# Shared events tests
+cd ../shared_events
+pytest
+```
+
+---
+
+## Security and Rules of Engagement
+
+- Scan only targets you own or are formally authorized to assess.
+- Never expose private secrets through frontend variables.
+- Use hardened secrets, strict CORS, and TLS for non-dev environments.
+- Keep Supabase RLS policies enabled and reviewed.
+
+---
+
+## Field Manuals
+
+- Platform architecture and deep dives: linkload-docs/
+- Core API and technical references: linkload-core/docs/
+- Service-level notes: each service folder README and docs
+
+---
+
+## License
+
+Released under the MIT License.
+
+## Credits
+
 Architected by Prateek Shrivastava ([@pratiyk](https://github.com/pratiyk))
