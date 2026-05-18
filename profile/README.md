@@ -40,16 +40,6 @@ If your team needs fast detection and clear prioritization under pressure, this 
 
 ---
 
-## Theater Status 
-
-- [ACTIVE] Web reconnaissance operations in production workflows.
-- [ACTIVE] Identity service split out and routed through BFF.
-- [ACTIVE] Scanner orchestrator + sidecar scanner fleet.
-- [ACTIVE] Async enrichment and intelligence processing via Redis.
-- [ACTIVE/OPTIONAL] Full observability stack with Prometheus, Loki, and Grafana.
-- [IN PROGRESS] ML lane is deployed and evolving as models mature.
-
----
 
 ## Operational Objectives
 
@@ -57,77 +47,51 @@ If your team needs fast detection and clear prioritization under pressure, this 
 2. Keep frontend simple: one gateway, one contract.
 3. Preserve data integrity with a single-writer Core model.
 4. Provide live mission feedback with WebSocket notifications and polling fallback.
-5. Keep deployment repeatable with Docker Compose and service isolation.
 
 ---
 
 ## Command Topology
 
-```
-                    ┌──────────────────────────┐
-                    │        Frontend          │
-                    │   React Dashboard:3000   │
-                    └─────────────┬────────────┘
-                            │ REST + WS
-                    ┌─────────────▼────────────┐
-                    │      LinkLoad-BFF        │
-                    │       Gateway:5000       │
-                    └──────┬─────────┬─────────┘
-                        │         │
-           ┌─────────────────────▼───┐ ┌───▼────────────────────┐
-           │   Sync Service Plane    │ │   Scanner Sidecars      │
-           │ Identity | Scanner |    │ │ ZAP | Nuclei | Wapiti  │
-           │ Core (Single Writer)    │ │ | Nikto                 │
-           └───────────────┬─────────┘ └───────────┬────────────┘
-                     │                       │
-                     └──────────┬────────────┘
-                          │
-                     ┌───────▼────────┐
-                     │  Redis Events  │
-                     └───┬─────────┬──┘
-                         │         │
-                ┌──────────────▼───┐ ┌──▼───────────────┐
-                │   Enrichment      │ │ Intelligence      │
-                │ (Threat Context)  │ │ (Risk + MITRE +   │
-                │                   │ │ Cost-Benefit)     │
-                └──────────────┬────┘ └──────┬───────────┘
-                         │             │
-                         └──────┬──────┘
-                             │
-                         ┌──────▼───────┐
-                         │      ML      │
-                         └──────┬───────┘
-                             │
-                         ┌──────▼───────┐
-                         │ PostgreSQL / │
-                         │ Supabase DB  │
-                         └──────────────┘
+```mermaid
+flowchart TB
+    FE[Frontend]
+    BFF[LinkLoad-BFF]
+
+    subgraph EXEC["Execution Layer"]
+        SSP["Sync Service Plane<br/>Identity | Scanner | Core<br/>(Single Writer)"]
+        SSC["Scanner Sidecars<br/>ZAP | Nuclei | Wapiti | Nikto"]
+    end
+
+    REDIS[(Redis Events)]
+
+    subgraph ANALYSIS["Analysis Layer"]
+        ENR["Enrichment<br/>Threat Context"]
+        INTEL["Intelligence<br/>Risk | MITRE | Cost-Benefit"]
+        ML[ML]
+    end
+
+    DB[(PostgreSQL / Supabase DB)]
+
+    FE -->|REST + WS| BFF
+    BFF --> SSP
+    BFF --> SSC
+    SSP --> REDIS
+    SSC --> REDIS
+    REDIS --> ENR
+    REDIS --> INTEL
+    ENR --> ML
+    INTEL --> ML
+    ML --> DB
 ```
 
 ### Rules of the Battlespace
 
-- Frontend talks only to BFF at http://localhost:5000.
+- Frontend talks only to BFF 
 - BFF routes auth to Identity and scan write/read paths to Scanner/Core.
 - Redis carries cross-service event traffic.
 - Core remains the authoritative persistence coordinator.
 
----
 
-## Unit Roster
-
-| Unit | Location | Tactical Role | Host Port |
-|------|----------|---------------|-----------|
-| Frontend | linkload-frontend | Mission dashboard | 3000 |
-| BFF | linkload-bff | API gateway, policy, WS notifications | 5000 |
-| Identity | linkload-identity | Authentication and account controls | Internal |
-| Scanner Orchestrator | linkload-scanner/orchestrator | Fan-out scan command | Internal |
-| ZAP | compose image | Active web app scanner | 8080 |
-| Nuclei/Wapiti/Nikto | linkload-scanner/*-svc | Scanner sidecar APIs | Internal |
-| Core | linkload-core | Result assembly and data write path | Internal |
-| Enrichment | linkload-enrichment | Threat context augmentation | Internal |
-| Intelligence | linkload-intelligence | Risk and MITRE analysis | Internal |
-| ML | linkload-ml | ML post-processing lane | Internal |
-| Redis | compose-managed | Event bus and cache | Internal |
 
 ---
 
@@ -144,98 +108,6 @@ If your team needs fast detection and clear prioritization under pressure, this 
 
 ---
 
-## Deployment Playbook
-
-### Prerequisites
-
-- Docker Engine 20.10+
-- Docker Compose v2+
-- Supabase project and credentials
-- Optional AI provider keys for enrichment/intelligence
-
-### Step 1: Clone
-
-```bash
-git clone https://github.com/pratiyk/Link-Load.git
-cd Link-Load
-```
-
-### Step 2: Stage Environment Files
-
-Minimum files:
-
-- linkload-devops/.env
-- linkload-core/.env
-
-Reference templates:
-
-- linkload-core/.env.example
-- linkload-bff/.env.example
-- linkload-frontend/.env.example
-- linkload-identity/.env.example
-
-Critical values:
-
-- DATABASE_URL
-- SUPABASE_URL
-- SUPABASE_KEY
-- SUPABASE_SERVICE_KEY
-- SUPABASE_JWT_SECRET
-- SECRET_KEY
-- REACT_APP_SUPABASE_URL
-- REACT_APP_SUPABASE_ANON_KEY
-
-### Step 3: Launch Stack
-
-```bash
-cd linkload-devops
-docker compose up -d --build
-```
-
-### Step 4: Confirm Service Readiness
-
-- Frontend: http://localhost:3000
-- BFF root: http://localhost:5000/
-- BFF liveness: http://localhost:5000/health/live
-
-```bash
-cd linkload-devops
-docker compose ps
-```
-
----
-
-## Live Telemetry Stack (Optional)
-
-Run the observability package independently:
-
-```bash
-cd monitoring-service
-docker compose up -d
-```
-
-Operational endpoints:
-
-- Grafana: http://localhost:3030
-- Prometheus: http://localhost:9090
-- Loki: http://localhost:3100
-- cAdvisor: http://localhost:8081
-
-Note: monitoring-service expects the external network linkload_linkload-network created by the main stack.
-
----
-
-## Frontend Runtime Injection
-
-Frontend Supabase public settings are injected at container startup.
-
-- linkload-frontend/docker-entrypoint.sh generates runtime-config.js.
-- Browser reads window.__RUNTIME_CONFIG__ via src/config/runtimeConfig.js.
-- Entry script blocks accidental service-role key exposure in frontend env.
-
-This keeps public config flexible without rebuilding images for every env change.
-
----
 
 ## Real-Time Command Channel
 
@@ -249,19 +121,6 @@ Progress and results are always available through polling-safe endpoints:
 
 - /api/v1/scans/comprehensive/{scan_id}/status
 - /api/v1/scans/comprehensive/{scan_id}/result
-
----
-
-## Shared Signal Protocol
-
-shared_events defines cross-service event contracts.
-
-- Docker services mount it read-only and use PYTHONPATH=/workspace:/app.
-- Local dev mode:
-
-```bash
-pip install -e ../shared_events
-```
 
 ---
 
@@ -279,24 +138,6 @@ pip install -e ../shared_events
 - monitoring-service: metrics, logs, dashboards
 - shared_events: event models and bus utilities
 - linkload-docs: architecture and implementation guides
-
----
-
-## Training Drills
-
-```bash
-# Core tests
-cd linkload-core
-pytest
-
-# Frontend tests
-cd ../linkload-frontend
-npm test -- --watchAll=false
-
-# Shared events tests
-cd ../shared_events
-pytest
-```
 
 ---
 
